@@ -65,29 +65,18 @@
             />
           </div>
           <p class="field-help" id="channel-help">Just your channel name. No sign-in needed.</p>
-          <div class="field-row">
-            <div>
-              <label for="language">Default language</label
-              ><select id="language" name="language">
-                <option value="en">English</option>
-                <option value="ja">Japanese</option>
-                <option value="zh">Chinese</option>
-                <option value="es">Spanish</option>
-                <option value="fr">French</option>
-                <option value="pt">Portuguese</option>
-                <option value="ko">Korean · unavailable*</option>
-                <option value="sv">Swedish · unavailable*</option>
-              </select>
-            </div>
-            <div>
-              <label for="models">Voice models</label
-              ><select id="models" name="models">
-                <option value="both">Both voices</option>
-                <option value="tsukuyomi">Tsukuyomi-chan</option>
-                <option value="css10">CSS10</option>
-              </select>
-            </div>
-          </div>
+          <label for="language">Default language</label
+          ><select id="language" name="language">
+            <option value="en">English</option>
+            <option value="ja">Japanese</option>
+            <option value="zh">Chinese</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="pt">Portuguese</option>
+            <option value="ko">Korean · unavailable*</option>
+            <option value="sv">Swedish · unavailable*</option>
+          </select>
+          <p class="field-help">Eight personal voices, powered by CSS10.</p>
           <label for="audience">Who gets the mic?</label
           ><select id="audience" name="audience">
             <option value="everyone">Everyone in chat</option>
@@ -288,31 +277,6 @@
           original SVG created for ChatStage.
         </p>
         <p>
-          <strong>Tsukuyomi-chan voice credit:</strong> Speech synthesis uses freely available voice
-          data from the free material character “Tsukuyomi-chan” (© Rei Yumesaki).
-          <a href="https://tyc.rei-yumesaki.net/material/corpus/"
-            >Tsukuyomi-chan Corpus (CV: Rei Yumesaki) · つくよみちゃんコーパス（CV.夢前黎）</a
-          >. Model by
-          <a href="https://huggingface.co/ayousanz/piper-plus-tsukuyomi-chan">ayousanz</a>. Pitch
-          and speed vary per viewer; voice qualities from different speakers are not merged.
-        </p>
-        <p>
-          <strong>Tsukuyomi-chan voice terms:</strong> Do not use this voice to criticize or attack
-          people; advocate for or against a particular political position, religion, or ideology;
-          publish strongly stimulating material without appropriate audience restrictions; or
-          distribute generated audio for others to reuse as source material. Finished works and
-          monetized streams are permitted. Credit for generated audio is optional; credit in this
-          software is provided above. See the
-          <a href="https://tyc.rei-yumesaki.net/material/corpus/">full corpus terms</a>,
-          <a href="https://tyc.rei-yumesaki.net/about/terms/#condition3"
-            >definition of criticism/attack</a
-          >, and
-          <a
-            href="https://tyc.rei-yumesaki.net/wp-content/uploads/tsukuyomi-chan_credit_template2.html"
-            >credit and terms template</a
-          >. This app uses original characters and no Tsukuyomi-chan character artwork.
-        </p>
-        <p>
           <strong>CSS10 voice credit:</strong>
           <a href="https://huggingface.co/ayousanz/piper-plus-css10-ja-6lang"
             >CSS10 Japanese model by ayousanz</a
@@ -327,9 +291,9 @@
         </p>
         <p>
           <strong>*Language note:</strong> The pinned runtime has G2P support for en / ja / zh / ko
-          / es / fr / pt / sv. These two supplied voice models contain only en / ja / zh / es / fr /
-          pt language IDs. Korean and Swedish are detected and preferences are saved, but their
-          speech is skipped with an explicit notice until compatible models are available. Caption
+          / es / fr / pt / sv. The CSS10 voice model contains only en / ja / zh / es / fr / pt
+          language IDs. Korean and Swedish are detected and preferences are saved, but their speech
+          is skipped with an explicit notice until compatible models are available. Caption
           highlighting estimates text position from phoneme timing; it is not word alignment.
         </p>
         <p>

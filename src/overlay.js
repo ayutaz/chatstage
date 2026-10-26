@@ -9,6 +9,7 @@ import { startDemo } from './demo.js';
 
 const options = readOptions(location.search);
 const preview = new URLSearchParams(location.search).get('preview') === '1';
+const compareVoices = new URLSearchParams(location.search).get('voices') === '1';
 const $ = (selector) => document.querySelector(selector);
 const stage = new Stage(document);
 let context,
@@ -35,10 +36,8 @@ const notice = (message) => {
   }, 8000);
 };
 const tts = new LocalTTS({
-  models: options.models,
   onProgress: (info) => {
-    $('#loading-detail').textContent =
-      `${info.model === 'tsukuyomi' ? 'Tsukuyomi-chan' : 'CSS10'} · ${info.message || info.stage}`;
+    $('#loading-detail').textContent = `CSS10 · ${info.message || info.stage}`;
     $('#load-progress').value = info.overall;
   },
 });
@@ -85,6 +84,7 @@ if (options.demo) {
   $('.demo-heading').hidden = false;
   $('.demo-controls').hidden = false;
   $('#demo-label').hidden = false;
+  if (compareVoices) $('#demo-label').textContent = 'EIGHT CSS10 VOICES';
   status('demo', 'Demo · no Twitch connection');
 }
 if (preview) document.body.classList.add('preview');
@@ -141,7 +141,11 @@ async function startAudio(userGesture) {
     starting = false;
     if (options.demo) {
       for (const id of [...stage.actors.keys()]) stage.leave(id);
-      stopDemo = startDemo((message) => controller.handle(message), options.channel || 'chatstage');
+      stopDemo = startDemo(
+        (message) => controller.handle(message),
+        options.channel || 'chatstage',
+        compareVoices,
+      );
     } else {
       client = new TwitchChat(options.channel, {
         onMessage: (m) => controller.handle(m),

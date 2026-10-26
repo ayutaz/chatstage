@@ -64,6 +64,7 @@ test('TTS uses verified public API, progress, real sample rate, explicit plain t
     synth = [],
     progress = [];
   const tts = new LocalTTS({
+    models: 'tsukuyomi', // An obsolete caller must still initialize only CSS10.
     onProgress: (p) => progress.push(p),
     loader: async () => ({
       ort: {},
@@ -89,9 +90,8 @@ test('TTS uses verified public API, progress, real sample rate, explicit plain t
     }),
   });
   await Promise.all([tts.initialize(), tts.initialize()]);
-  assert.equal(init.length, 2);
-  assert.equal(init[0].model, 'tsukuyomi');
-  assert.equal(init[1].model, 'css10');
+  assert.equal(init.length, 1);
+  assert.equal(init[0].model, 'css10');
   assert.match(init[0].wasmG2pUrl, /unpkg/);
   const item = { spokenText: '<speak>Hello</speak>', language: 'en', voice: voiceFor('x', 3) };
   const result = await tts.synthesize(item);
@@ -99,6 +99,9 @@ test('TTS uses verified public API, progress, real sample rate, explicit plain t
   assert.equal(result.duration, 1);
   assert.equal(result.sampleRate, 24000);
   assert.equal(progress.at(-1).overall, 1);
+  for (let id = 1; id <= 8; id++) await tts.synthesize({ ...item, voice: voiceFor('x', id) });
+  assert.equal(init.length, 1);
+  assert.equal(synth.length, 9);
   await assert.rejects(tts.synthesize({ ...item, language: 'ko' }), /unavailable/);
 });
 test('audio playback uses PCM rate, gain, playbackRate, and actual audio clock', async () => {

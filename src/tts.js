@@ -10,9 +10,9 @@ export async function loadRuntime() {
   return { PiperPlus, ort };
 }
 export class LocalTTS {
-  constructor({ models = 'both', onProgress = () => {}, loader = loadRuntime } = {}) {
-    Object.assign(this, { models, onProgress, loader });
-    this.engines = new Map();
+  constructor({ onProgress = () => {}, loader = loadRuntime } = {}) {
+    Object.assign(this, { onProgress, loader });
+    this.engine = null;
     this.initializing = null;
   }
   initialize() {
@@ -24,38 +24,32 @@ export class LocalTTS {
     return this.initializing;
   }
   async load() {
+    if (this.engine) return;
     const { PiperPlus, ort } = await this.loader();
-    const models = this.models === 'both' ? ['tsukuyomi', 'css10'] : [this.models];
-    for (let i = 0; i < models.length; i++) {
-      const model = models[i];
-      if (this.engines.has(model)) continue;
-      const engine = await PiperPlus.initialize({
-        model,
-        ort,
-        wasmG2pUrl: 'https://unpkg.com/piper-plus@0.8.2/dist/rust-wasm/piper_plus_wasm.js',
-        onProgress: (info) =>
-          this.onProgress({
-            ...info,
-            model,
-            overall:
-              (i +
-                (info.stage === 'model' ? info.progress * 0.7 : info.stage === 'ready' ? 1 : 0.8)) /
-              models.length,
-          }),
-      });
-      this.engines.set(model, engine);
-    }
+    // This is the only model permitted for chatter characters. Legacy model
+    // options/URLs and stale per-message model fields cannot select another one.
+    this.engine = await PiperPlus.initialize({
+      model: 'css10',
+      ort,
+      wasmG2pUrl: 'https://unpkg.com/piper-plus@0.8.2/dist/rust-wasm/piper_plus_wasm.js',
+      onProgress: (info) =>
+        this.onProgress({
+          ...info,
+          model: 'css10',
+          overall: info.stage === 'model' ? info.progress * 0.7 : info.stage === 'ready' ? 1 : 0.8,
+        }),
+    });
   }
   async synthesize(item) {
     await this.initialize();
-    const engine = this.engines.get(item.voice.model);
+    const engine = this.engine;
     if (!engine) throw new Error('The selected voice model is not loaded.');
     const supported = engine.config?.language_id_map
       ? Object.keys(engine.config.language_id_map)
       : MODEL_LANGUAGES;
     if (!supported.includes(item.language))
       throw new Error(
-        `${LANGUAGES[item.language]} speech is unavailable in the supplied six-language models. Try !lang en or !lang ja.`,
+        `${LANGUAGES[item.language]} speech is unavailable in the CSS10 six-language model. Try !lang en or !lang ja.`,
       );
     const { lengthScale } = synthesisSettings(item.voice);
     // Explicitly disable Piper's automatic SSML parsing for untrusted chat.
@@ -81,8 +75,8 @@ export class LocalTTS {
     };
   }
   dispose() {
-    for (const engine of this.engines.values()) engine.dispose();
-    this.engines.clear();
+    this.engine?.dispose();
+    this.engine = null;
     this.initializing = null;
   }
 }

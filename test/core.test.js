@@ -102,10 +102,41 @@ test('voices are stable, bounded, distinct, and pitch compensation preserves pac
   assert.equal(voiceFor('42', 3).id, 3);
   assert.equal(voiceFor('42', 3, 'css10').model, 'css10');
   assert.equal(VOICES.length, 8);
+  assert.deepEqual([...new Set(VOICES.map((voice) => voice.model))], ['css10']);
+  assert.equal(voiceFor('42', 3, 'tsukuyomi').model, 'css10');
+  assert.equal(new Set(VOICES.map((voice) => voice.pitch)).size, 8);
+  const pitches = VOICES.map((voice) => voice.pitch);
+  assert.ok(Math.min(...pitches) >= 0.8 && Math.max(...pitches) <= 1.3);
+  assert.ok(Math.max(...pitches) - Math.min(...pitches) >= 0.49);
   for (const voice of VOICES) {
     const s = synthesisSettings(voice);
     assert.equal(s.playbackRate, voice.pitch);
     assert.ok(Math.abs(s.lengthScale / s.playbackRate - 1.5 / voice.speed) < 1e-9);
+  }
+});
+test('legacy model settings are ignored and cannot enter generated OBS URLs', () => {
+  for (const model of ['tsukuyomi', 'both', 'css10', 'unknown']) {
+    const options = readOptions(`channel=alice&models=${model}`);
+    assert.equal(Object.hasOwn(options, 'models'), false);
+    assert.equal(voiceFor('alice', 1).model, 'css10');
+    const url = new URL(
+      overlayURL('https://ayutaz.github.io/chatstage/', { ...options, models: model }),
+    );
+    assert.equal(url.pathname, '/chatstage/overlay.html');
+    assert.equal(url.searchParams.has('models'), false);
+  }
+});
+test('OBS URL follows the current GitHub Pages directory and origin', () => {
+  for (const base of [
+    'https://ayutaz.github.io/chatstage/',
+    'https://ayutaz.github.io/chatstage/index.html?demo=1#setup',
+  ]) {
+    const url = new URL(overlayURL(base, readOptions('channel=alice')));
+    assert.equal(url.origin, 'https://ayutaz.github.io');
+    assert.equal(url.pathname, '/chatstage/overlay.html');
+    assert.equal(url.hash, '');
+    assert.equal(url.searchParams.get('channel'), 'alice');
+    assert.equal(url.searchParams.get('demo'), '0');
   }
 });
 test('preferences persist per channel, migrate login to id, and survive broken storage', () => {

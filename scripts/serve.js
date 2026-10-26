@@ -13,8 +13,9 @@ const mime = {
   '.md': 'text/plain',
   '.wasm': 'application/wasm',
 };
-export function createStaticServer(directory = root) {
+export function createStaticServer(directory = root, basePath = '/') {
   const base = resolve(directory);
+  if (!/^\/(?:[a-zA-Z0-9_-]+\/)*$/.test(basePath)) throw new Error('Invalid base path');
   return createServer(async (req, res) => {
     try {
       if (!['GET', 'HEAD'].includes(req.method)) {
@@ -22,7 +23,14 @@ export function createStaticServer(directory = root) {
         res.end();
         return;
       }
-      const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
+      const requestURL = new URL(req.url, 'http://localhost');
+      if (basePath !== '/' && requestURL.pathname === basePath.slice(0, -1)) {
+        res.writeHead(302, { Location: basePath + requestURL.search });
+        res.end();
+        return;
+      }
+      if (!requestURL.pathname.startsWith(basePath)) throw Error('Outside base path');
+      const pathname = decodeURIComponent('/' + requestURL.pathname.slice(basePath.length));
       const segments = pathname.split(/[\\/]/);
       if (
         segments.some(
@@ -51,7 +59,8 @@ export function createStaticServer(directory = root) {
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const port = Number(process.env.PORT || 4173);
-  createStaticServer().listen(port, '127.0.0.1', () =>
-    console.log(`ChatStage: http://localhost:${port}`),
+  const basePath = process.env.BASE_PATH || '/';
+  createStaticServer(root, basePath).listen(port, '127.0.0.1', () =>
+    console.log(`ChatStage: http://localhost:${port}${basePath}`),
   );
 }

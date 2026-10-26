@@ -57,7 +57,7 @@ export class ChatController {
       spokenText: this.options.readNames ? `${name}: ${text}` : text,
       color: /^#[0-9a-f]{6}$/i.test(m.tags.color) ? m.tags.color : null,
       language: chooseLanguage(text, prefs.language, this.options.language),
-      voice: voiceFor(userId, prefs.voice, this.options.models),
+      voice: voiceFor(userId, prefs.voice),
       readNames: this.options.readNames,
     });
   }

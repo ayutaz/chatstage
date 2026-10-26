@@ -16,7 +16,6 @@ export const DEFAULTS = {
   maxLength: 180,
   volume: 0.8,
   audience: 'everyone',
-  models: 'both',
   queue: 20,
   demo: false,
 };
@@ -40,7 +39,6 @@ export function readOptions(search = '') {
     audience: ['everyone', 'subs', 'vips'].includes(p.get('audience'))
       ? p.get('audience')
       : 'everyone',
-    models: ['both', 'tsukuyomi', 'css10'].includes(p.get('models')) ? p.get('models') : 'both',
     demo: p.get('demo') === '1',
   };
 }

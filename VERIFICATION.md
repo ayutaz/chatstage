@@ -1,38 +1,36 @@
-# ChatStage verification — 2026-10-26
+# ChatStage verification — CSS10-only follow-up, 2026-10-26
 
-## Automated
+## Changes verified
 
-- Node **v24.15.0**, `node --test`: **26 tests passed**, no failures/skips.
-- Tests cover IRC tags/escapes/badges/emote ranges and moderation messages; UTF-32/code-point emote cleaning after an astral emoji; URL/emoji/repeat/control cleanup; eight-language detection and sticky overrides; deterministic voices/pitch compensation; bounded preference persistence; viewer/mod commands and authorization; deduplication; queue overload, prefetch, cancellation, pause/resume, failures, and the clear-while-paused transport regression.
-- Adapter tests verify the real Piper API contract (`samples`, `sampleRate`, timing, `language`, `lengthScale`, and `ssml: false`), explicit unsupported model language handling, PCM sample rate, gain/playback rate, and actual audio-clock elapsed time.
-- Static HTTP integration checks serve the real HTML/ES modules with correct MIME types and reject private/developer paths. Importmap pins and demo emote/moderation fixtures are checked.
-- `npm install --package-lock-only --ignore-scripts` reported **0 vulnerabilities** for the pinned dependency graph at the time of installation. Tests do not require these dependencies.
+- All eight presets use **CSS10**. Their IDs/names stay stable, with eight different pitch/playback rates spanning **0.80–1.30** and independently varied speeds **0.84–1.18**. Synthesis length compensates for pitch changes so the selected pace is retained.
+- The speech adapter has one fixed `PiperPlus.initialize({ model: 'css10', ... })` path and one engine. It does not select or initialize another voice model, even when an obsolete caller passes a different model setting. This removes the extra voice-model download and inference-session initialization; no controlled wall-clock speedup measurement was made.
+- Model selection is removed from setup/configuration and generated URLs. Legacy `models` URL or saved-setup fields are ignored safely. The old model's UI credits/terms and stage attribution are removed; the CSS10 credits remain. README contains the project owner's requested short licensing explanation.
+- Application-owned asset, module, preview, navigation, and overlay URLs are relative. OBS URLs resolve from the current page location. External CDN/model URLs remain absolute as required by the pinned runtime.
 
-## Real environment checks
+## Automated checks
 
-- **Chrome, actual CDN modules and real neural models:** both Piper models initialized successfully. A complete scripted demo cycle ran. Captions reported `PHONEME SYNC` from actual timing, the queue advanced through generated audio, and no warnings/errors appeared in the captured browser console.
-- **Browser UI:** entering a channel generated the expected overlay URL and **Copy OBS URL** reported success. Preferences were restored on reload. The demo's **Pause → Clear stage → Resume** sequence cleared the cast/caption and resumed subsequent Japanese speech with phoneme timing.
-- **Responsive setup:** inspected at 390 CSS px; document width did not exceed the viewport. Desktop demo inspected at 1920 CSS px width. The live overlay background is transparent by CSS; demo has a distinct dark backdrop.
-- **Real Twitch endpoint:** the application `TwitchChat` client connected anonymously to `#twitchdev`, received the room-joined status, and disconnected. No chat messages were sent or logged.
+- Node **v24.15.0**, `node --test`: **31 tests passed**, no failures/skips.
+- New regression coverage verifies all eight presets use CSS10, have different pitches within the requested bounds, and retain pitch/pace compensation; obsolete model settings cannot affect voices or enter newly generated OBS URLs; concurrent initialization plus all eight syntheses initialize only one CSS10 engine; removed UI content stays absent; and the same-sentence audition routes all eight presets through the actual IRC parser/controller.
+- The project-subpath HTTP test mounts the real site at **`/chatstage/`**, follows both HTML entry points and their local asset/module graph, verifies successful responses, rejects root-relative references, and checks the directory redirect. OBS URL tests cover **`https://ayutaz.github.io/chatstage/`** and its `index.html` URL with query/hash values.
+- Existing coverage remains for IRC tags/escapes/badges/emotes/moderation, Unicode code-point cleaning, language detection, commands/authorization, persistence, deduplication, visemes/audio clock, queue overload/prefetch/cancellation/errors/pause/resume, PCM sample rate, plain-text synthesis, and private-path rejection.
+- `git diff --check` passes. No commits or other Git writes were attempted, as requested by the project owner; the prior implementation was committed externally.
 
-## Boundaries and remaining limitations
+## Chrome checks for this follow-up
 
-- **Six spoken languages, eight detected languages:** both supplied Hugging Face configs were fetched and contain only `ja/en/zh/es/fr/pt` language IDs. Korean/Swedish speech requires compatible models. The app saves those preferences but skips synthesis with a clear notice. No cloud or OS fallback disguises the limitation.
-- Browser playback progression and timing were observed; **human listening quality, pronunciation, perceived voice distinctness, exact lip-sync quality, and real OBS audio routing were not independently assessed**.
-- Full live broadcaster chat/moderation was covered with IRC fixtures and unit/integration tests; the live Twitch check confirms anonymous connectivity, not every moderation event in production.
-- Caption character highlighting is an estimate from phoneme timing, not word alignment.
-- GitHub Actions/Pages files are provided, but no remote repository is configured here and **no deployment was performed**.
-- A requested logical commit was attempted after the first 19 passing tests. Git staging and commit both failed with **`.git/index.lock: Permission denied`** because the session exposes `.git` read-only. No commits could be created. The original brief and runner log remain intact; logs and dependencies are ignored. Commit the workspace from a session with Git metadata write access.
+- Served the actual application at **`http://localhost:4174/chatstage/`** using the development server's project-prefix mount. The setup page, styles, characters, modules, and embedded overlay loaded correctly.
+- Entering a channel and clicking **Copy OBS URL** succeeded. The resulting URL began with **`http://localhost:4174/chatstage/overlay.html`**, preserved the configured options, and contained no model parameter. The removed model selector and voice attribution were absent; CSS10 credits were visible.
+- Opened **`/chatstage/overlay.html?demo=1&models=tsukuyomi`** to exercise a legacy URL. Loading identified **CSS10**, then the multilingual demo ran with real neural audio/timing. The queue progressed, `PHONEME SYNC` appeared, and the captured browser console showed no warnings/errors. Only-CSS10 initialization is established by the adapter implementation and spy-based test; a browser network trace was not available in the browser tool.
+- Opened the **Compare 8 voices** link under the same prefix. Its **`?demo=1&voices=1`** audition plays the same English sentence with each preset, making pitch/pace comparisons reproducible. It reached preset **8 · Moss**, with the final caption completed, an empty queue, phoneme timing, and no captured browser warnings/errors. A screenshot is retained at `.artifacts/chatstage-css10.jpg` (ignored by Git).
 
-## Suggested logical commits when Git writes are available
+## Evidence retained from the initial implementation
 
-```sh
-git add .gitignore .prettierrc.json BRIEF.md package.json package-lock.json src/config.js src/irc.js src/text.js src/language.js src/voices.js src/preferences.js src/controller.js src/visemes.js src/queue.js test/core.test.js test/queue.test.js
-git commit -m "Build tested chat processing and cancellable speech queue"
-git add index.html overlay.html assets src/setup.js src/overlay.js src/stage.js src/demo.js src/tts.js src/twitch.js scripts test/integration.test.js test/site.test.js
-git commit -m "Add local neural speech, Twitch overlay, demo, and setup"
-git add README.md LICENSE VERIFICATION.md .github/workflows/pages.yml
-git commit -m "Document voice terms and verification and deploy with Pages"
-```
+- The setup page was inspected at 390 CSS px without horizontal overflow, and the desktop overlay at 1920 CSS px width.
+- Browser **Pause → Clear stage → Resume** removed the cast/caption and allowed subsequent speech. This transport behavior also has a regression test.
+- The application `TwitchChat` client previously connected anonymously to `#twitchdev`, received the room-joined status, and disconnected without sending or logging chat messages. That live check was not repeated for this voice-only follow-up; the connection code is unchanged.
 
-Run `node --test` before committing. Publishing is separate from these local commits.
+## Limits
+
+- CSS10 contains only **ja/en/zh/es/fr/pt** language IDs. Korean/Swedish are detected and their preferences are saved, but synthesis is skipped with a clear notice. There is no cloud/OS fallback.
+- The widened preset parameters and real synthesis/playback progression were checked. **Human listening quality, pronunciation, perceived naturalness/distinctness, exact lip-sync quality, and real OBS audio routing were not independently scored.** The audition is provided for direct listening comparison.
+- Caption character highlighting remains an estimate from phoneme boundaries, not word alignment.
+- The GitHub Pages project path was reproduced locally and checked against the intended HTTPS URL in unit tests. **No production deployment was performed or verified in this follow-up.**

@@ -1,4 +1,5 @@
 import { parseIRC } from './irc.js';
+import { VOICES } from './voices.js';
 const PEOPLE = {
   miso: ['101', 'miso_moon', '#C5CDA5'],
   peach: ['102', 'peachy', '#F3AE8F'],
@@ -30,6 +31,15 @@ export const DEMO_SCRIPT = [
   [50000, 'sunny', 'Good moderation keeps the stage welcoming.'],
   [55000, 'miso', 'Your community. Their voices. One little stage.'],
 ];
+// An optional demo-only audition uses the same sentence for every preset so
+// differences in pitch and pace can be compared without changing the text.
+export const VOICE_DEMO_SCRIPT = [
+  [0, 'miso', '!lang en'],
+  ...VOICES.flatMap((voice, index) => [
+    [index * 6000 + 100, 'miso', `!voice ${voice.id}`],
+    [index * 6000 + 200, 'miso', 'Hello, chat. Welcome to our little stage.'],
+  ]),
+];
 export function demoMessage(person, text, sequence, extra = '', channel = 'chatstage') {
   if (person === 'ban') {
     const [id, login] = PEOPLE[text];
@@ -42,13 +52,13 @@ export function demoMessage(person, text, sequence, extra = '', channel = 'chats
     `@user-id=${id};id=demo-${sequence};display-name=${login};color=${color};badges=${person === 'mod' ? 'moderator/1' : 'subscriber/1'};mod=${person === 'mod' ? '1' : '0'};${extra} :${login}!${login}@demo PRIVMSG #${channel} :${text}`,
   );
 }
-export function startDemo(onMessage, channel = 'chatstage') {
+export function startDemo(onMessage, channel = 'chatstage', compareVoices = false) {
   let sequence = 0,
     timers = [],
     stopped = false;
   const cycle = () => {
     if (stopped) return;
-    timers = DEMO_SCRIPT.map(([delay, person, text, extra]) =>
+    timers = (compareVoices ? VOICE_DEMO_SCRIPT : DEMO_SCRIPT).map(([delay, person, text, extra]) =>
       setTimeout(() => onMessage(demoMessage(person, text, ++sequence, extra, channel)), delay),
     );
     timers.push(setTimeout(cycle, 64000));

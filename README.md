@@ -17,7 +17,7 @@ Open <http://localhost:4173>. `npm start` is a small **development-only** static
 
 ## 60-second OBS setup
 
-1. Open the setup page, enter a Twitch **login/channel name** (not a display name), and choose a language, voice model set, audience, volume, and message length.
+1. Open the setup page, enter a Twitch **login/channel name** (not a display name), and choose a language, audience, volume, and message length.
 2. Click **Copy OBS URL**. In OBS, add a **Browser Source**, paste the URL, and set **Width 1920**, **Height 1080**. The normal live overlay is transparent; only the demo has a backdrop.
 3. Check **Control audio via OBS** and set the source volume in the mixer. In Advanced Audio Properties, use **Monitor and Output** only if you also want to hear it yourself; select your monitoring device in OBS audio settings. Avoid routing the same audio through Desktop Audio twice.
 4. Allow the first model download to finish. OBS usually permits autoplay. If the start gate appears, right-click the source → **Interact** → **Start audio**. Keep **Shutdown source when not visible** off if you want continuous chat and preferences.
@@ -28,14 +28,27 @@ Use the deployed HTTPS URL for a portable OBS source. A localhost URL works whil
 
 | Command | Behavior |
 | --- | --- |
-| `!voice 1` … `!voice 8` | Choose one of eight pitch/speed/model presets. |
+| `!voice 1` … `!voice 8` | Choose one of eight CSS10 pitch/speed presets. |
 | `!voice random` | Choose and save a random preset. |
 | `!lang en` | Sticky language override; takes precedence over detection. Codes: `en`, `ja`, `zh`, `ko`, `es`, `fr`, `pt`, `sv`. See language limitations below. |
 | `!lang auto` | Reset the override. |
 | `!quiet` / `!quiet on` | Toggle your own speech off/on, or explicitly opt out. Queued/current lines are removed when opting out. |
 | `!quiet off` | Opt back in. Does not override a moderator mute. |
 
-The user ID (login when absent) is hashed to a stable preset and character appearance. The Twitch color tag colors their character; missing colors get a deterministic palette color. Preferences persist in localStorage, per channel and per browser profile. Voice changes affect **future** lines. A single-model setup still offers eight pitch/speed combinations using the chosen model.
+The user ID (login when absent) is hashed to a stable preset and character appearance. The Twitch color tag colors their character; missing colors get a deterministic palette color. Preferences persist in localStorage, per channel and per browser profile. Voice changes affect **future** lines. All eight presets use the CSS10 model, with distinct pitch values from 0.80 to 1.30 and independent speed values from 0.84 to 1.18; synthesis-length compensation preserves their chosen pace. Preset IDs and names remain stable for saved viewer preferences. Old `models=tsukuyomi`, `models=both`, or other model settings are safely ignored; new OBS URLs omit the model parameter.
+
+| Preset | Pitch / playback rate | Speed |
+| --- | --- | --- |
+| 1 · Velvet | 0.80 | 0.88 |
+| 2 · Peach | 1.08 | 1.06 |
+| 3 · Pip | 1.30 | 1.13 |
+| 4 · Moon | 0.94 | 0.84 |
+| 5 · Cedar | 0.87 | 1.02 |
+| 6 · Sunny | 1.15 | 0.96 |
+| 7 · Pixel | 1.22 | 1.18 |
+| 8 · Moss | 1.01 | 0.91 |
+
+Use **Compare 8 voices** in the demo (or `overlay.html?demo=1&voices=1`) to audition the same English sentence across all eight presets. The wider pitch spread and varied pace provide separation without extreme pitch shifts; perceived naturalness and distinctness still require listening.
 
 ## Broadcaster and moderator commands
 
@@ -50,19 +63,19 @@ Authorization uses Twitch `mod=1` or `moderator`/`broadcaster` badges, never a d
 
 Audience choices: everyone; subscribers/founders + mods/broadcaster; or VIPs + mods/broadcaster. Viewer preference commands work regardless of audience. Other `!` commands are never spoken. Message IDs are deduplicated in a bounded in-memory window.
 
-## Language support: runtime vs. voice models
+## Language support: runtime vs. voice model
 
-The **pinned runtime supports eight G2P languages**, but the **two requested model configs contain six language IDs**: `ja`, `en`, `zh`, `es`, `fr`, `pt`. Their model cards advertise six languages. ChatStage synthesizes these six with Piper. Korean and Swedish are detected and their language preferences are accepted, but speech is **skipped with an explicit notice**, rather than supplying a nonexistent model input, silently using English, or transmitting text to another service. Full eight-language speech needs compatible trained models and is an upstream limitation of the brief's prescribed models. No cloud/OS fallback is used.
+The **pinned runtime supports eight G2P languages**, but the **CSS10 model config contains six language IDs**: `ja`, `en`, `zh`, `es`, `fr`, `pt`. Its model card advertises six languages. ChatStage synthesizes these six with Piper. Korean and Swedish are detected and their language preferences are accepted, but speech is **skipped with an explicit notice**, rather than supplying a nonexistent model input, silently using English, or transmitting text to another service. Full eight-language speech needs compatible trained models and is an upstream limitation of the CSS10 model. No cloud/OS fallback is used.
 
 Automatic detection prioritizes kana → Japanese; Hangul → Korean; Han without kana → Chinese. Confident lexical/diacritic hints identify Spanish, French, Portuguese, and Swedish; other Latin text defaults to English. Numbers/punctuation fall back to the channel language. `!lang` overrides all detection, including ambiguous Han-only Japanese. This is a small heuristic, not a general language classifier.
 
 ## Audio, timing, and queue
 
 - Uses **`piper-plus@0.8.2`**, **`@piper-plus/g2p@0.4.2`**, **`onnxruntime-web@1.30.0`**. Piper is loaded from **unpkg** because its approximately 60 MB G2P WASM exceeds jsDelivr's file limit; G2P JS and ORT come from jsDelivr, as the package README prescribes. The WASM module URL is explicitly absolute to avoid ambiguity in dynamic-import resolution.
-- Models `tsukuyomi` / `css10` are downloaded directly from Hugging Face. Both initialize before chat starts, with model and phonemizer progress. Piper caches model/config data in IndexedDB; WASM uses the browser HTTP cache. First use needs internet and can download well over 100 MB. Cache eviction/private browsing can require another download. No claim of fully offline startup is made: CDN modules and model metadata may still require the network.
+- Only `css10` is downloaded from Hugging Face and initialized before chat starts, with model and phonemizer progress. Initialization creates one inference session and downloads one voice model, avoiding a second model download and session startup. Piper caches model/config data in IndexedDB; WASM uses the browser HTTP cache. First use needs internet and can download well over 100 MB. Cache eviction/private browsing can require another download. No claim of fully offline startup is made: CDN modules and model metadata may still require the network.
 - Single-thread ORT WASM works on GitHub Pages without COOP/COEP/SharedArrayBuffer. Piper can attempt GPU acceleration and fall back to WASM. Long synthesis can still be CPU-intensive; keep the message limit modest.
 - `synthesize()` returns an `AudioResult`; ChatStage consumes its actual `Float32Array samples`, `sampleRate`, `hasTimingInfo`, and `timing.phonemes` (`start_ms` / `end_ms`). It disables SSML parsing for chat text (`ssml: false`). No HTML from chat is inserted into the document.
-- Pitch is changed with `AudioBufferSourceNode.playbackRate`; synthesis uses `lengthScale = 1.5 × pitch / speed` so pitch changes are compensated for pace. No speaker IDs are invented for these single-speaker models.
+- Pitch is changed with `AudioBufferSourceNode.playbackRate`; synthesis uses `lengthScale = 1.5 × pitch / speed` so pitch changes are compensated for pace. No speaker IDs are invented for this single-speaker model.
 - Mouth shapes follow Japanese/IPA phonemes on `AudioContext.currentTime`, multiplied by the playback rate. Pausing freezes this clock. Missing timing closes the mouth; the app does not manufacture phoneme data. Caption highlighting estimates character position from phoneme boundaries; Piper supplies no word/character alignment. Timing may inherit upstream trimming/alignment imperfections, especially on very short inputs.
 - A bounded FIFO queue drops the oldest **waiting** entry when full, counts dropped lines as `+N`, and prepares one next entry while current audio plays. Moderation invalidates pending synthesis and prepared audio before they can play. There is at most one synthesis operation in flight.
 - Cleans Twitch emote ranges using **Unicode code-point positions**, before text normalization; replaces URLs with “link”; strips emoji/control characters; collapses repeats; caps code-point length. Twitch ranges are inclusive. The astral-emoji regression test distinguishes this from JavaScript UTF-16 indexing.
@@ -92,6 +105,18 @@ Pending chat/audio lives in memory; the **last spoken caption remains visible** 
 
 The included `.github/workflows/pages.yml` runs `node --test` on pull requests and `main` pushes. After successful main tests it uploads **only** HTML, source modules, CSS/SVG, README, and license, and deploys with the official GitHub Pages actions. No build command, npm installation, node_modules, developer logs, or private files go into the site artifact. In repository **Settings → Pages → Source**, select **GitHub Actions**. Push to `main` or run the workflow manually. Relative URLs support `https://owner.github.io/repository/` paths.
 
+All application HTML assets, ES-module imports, setup links, and overlay links use relative paths. OBS URLs are resolved from the current page location, so opening `https://ayutaz.github.io/chatstage/` or its `index.html` generates `https://ayutaz.github.io/chatstage/overlay.html?...`. Pinned external CDN/runtime/model URLs remain absolute.
+
+To reproduce the project path locally in PowerShell:
+
+```powershell
+$env:PORT = "4174"
+$env:BASE_PATH = "/chatstage/"
+npm start
+```
+
+Then open <http://localhost:4174/chatstage/>. Tests traverse the served HTML asset/module graph under that prefix and verify URL generation against the actual GitHub Pages origin.
+
 Deployment configuration is included; publishing requires a writable Git repository and a GitHub Pages-enabled remote. Actual OBS playback, output routing, language intelligibility, and production deployment need separate confirmation in those environments.
 
 ## Built with Codex
@@ -100,11 +125,11 @@ This project was implemented with OpenAI Codex from `BRIEF.md`: package-source i
 
 ## Credits, licenses, and voice-use terms
 
-ChatStage code and original SVG characters: **MIT**, see [LICENSE](LICENSE). Voice models/data have **separate** terms and are not re-licensed by the app's MIT license. They are downloaded at runtime, not redistributed in this repository. The character art is original and does not use Tsukuyomi-chan's character design.
+ChatStage code and original SVG characters: **MIT**, see [LICENSE](LICENSE). Voice models/data have **separate** terms and are not re-licensed by the app's MIT license. They are downloaded at runtime, not redistributed in this repository. The character art is original.
+
+The Tsukuyomi-chan model is intentionally not used because its [corpus terms](https://tyc.rei-yumesaki.net/material/corpus/) require prior consultation for voicing other characters.
 
 - [Piper Plus](https://github.com/ayutaz/piper-plus) and `@piper-plus/g2p`: MIT. [ONNX Runtime](https://github.com/microsoft/onnxruntime): MIT. Piper TTS: [rhasspy/piper](https://github.com/rhasspy/piper). MB-iSTFT-VITS: [Kawamura et al.](https://arxiv.org/abs/2210.15975). See the runtime packages for bundled dictionary/dependency notices.
-- [Tsukuyomi-chan model by ayousanz](https://huggingface.co/ayousanz/piper-plus-tsukuyomi-chan): follows the **custom Tsukuyomi-chan Corpus terms**, not an unrestricted MIT model license. Speech synthesis uses freely available voice data from the free material character **Tsukuyomi-chan (© Rei Yumesaki)**. **Tsukuyomi-chan Corpus (CV: Rei Yumesaki) / つくよみちゃんコーパス（CV.夢前黎）**, <https://tyc.rei-yumesaki.net/material/corpus/>. Pitch/speed are varied; different speakers' voice qualities are not merged. This attribution and the following terms are also visibly reproduced on the setup page, with a persistent credit on the stage.
-- When using the **Tsukuyomi-chan voice**, do not use generated audio to criticize/attack people ([definition](https://tyc.rei-yumesaki.net/about/terms/#condition3)), advocate for or against a particular political position/religion/ideology, publish strongly stimulating material without appropriate audience restrictions, or distribute audio as material for others to reuse. Finished works and monetized streams are permitted. Generated-audio credit is optional; this software provides the required corpus credit. See the [complete corpus terms](https://tyc.rei-yumesaki.net/material/corpus/) and [credit/terms template](https://tyc.rei-yumesaki.net/wp-content/uploads/tsukuyomi-chan_credit_template2.html). These restrictions originate in the voice provider's terms. Use CSS10-only mode if that voice's terms fit your stream better.
 - [CSS10 Japanese model by ayousanz](https://huggingface.co/ayousanz/piper-plus-css10-ja-6lang): model card says **CSS10 public-domain dataset terms** (`license: other`, `license_name: css10-public-domain`) and refers to [CSS10](https://github.com/Kyubyong/css10). Dataset: **Kyubyong Park and Thomas Mulc**, “CSS10: A Collection of Single Speaker Speech Datasets for 10 Languages” (Interspeech, 2019). Japanese audiobook: *Meian* by Natsume Sōseki, read by **ekzemplaro**, LibriVox. CSS10 repository **code** is Apache-2.0; that is distinct from dataset/voice terms. [LibriVox's public-domain statement](https://librivox.org/pages/public-domain/) applies in the USA and asks users elsewhere to check local copyright status.
 
-Upstream model cards, configs, and corpus terms were checked on **2026-10-26**. Model aliases resolve upstream files, so future changes to those repositories may alter downloads or model behavior even though JS packages are pinned.
+The CSS10 model card/config and the project owner’s voice-licensing correction were reviewed on **2026-10-26**. The CSS10 alias resolves upstream files, so future repository changes may alter downloads or model behavior even though JS packages are pinned.
