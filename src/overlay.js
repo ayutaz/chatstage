@@ -6,6 +6,7 @@ import { LocalTTS, AudioPlayer } from './tts.js';
 import { TwitchChat } from './twitch.js';
 import { Stage } from './stage.js';
 import { startDemo } from './demo.js';
+import { OverlaySession } from './session.js';
 
 const options = readOptions(location.search);
 const preview = new URLSearchParams(location.search).get('preview') === '1';
@@ -16,8 +17,6 @@ let context,
   player,
   client,
   stopDemo,
-  starting = false,
-  started = false,
   destroyed = false,
   noticeTimer;
 let storage;
@@ -78,6 +77,77 @@ function status(state, text) {
   $('#connection').dataset.state = state;
   $('#connection span').textContent = text;
 }
+function createAudioContext() {
+  const audioContext = new (globalThis.AudioContext || globalThis.webkitAudioContext)();
+  audioContext.addEventListener('statechange', () => {
+    if (session.audioReady && audioContext.state === 'suspended' && !queue.paused) {
+      $('#gate').hidden = false;
+      $('#start-audio').textContent = 'Resume audio ↗';
+    }
+  });
+  return audioContext;
+}
+const session = new OverlaySession({
+  isDestroyed: () => destroyed,
+  prepareAudio: async (userGesture) => {
+    if (!context || context.state === 'closed') context = createAudioContext();
+    if (userGesture || context.state !== 'running') await context.resume();
+    if (context.state !== 'running') return false;
+    player ||= new AudioPlayer(context, options.volume);
+    $('#gate').hidden = true;
+    $('#loading').hidden = false;
+    await tts.initialize();
+    if (destroyed) {
+      tts.dispose();
+      return false;
+    }
+    return true;
+  },
+  resumeAudio: () => context.resume(),
+  onReady: () => {
+    $('#gate').hidden = true;
+    $('#loading').hidden = true;
+    queue.start();
+  },
+  startChat: () => {
+    if (options.demo) {
+      for (const id of [...stage.actors.keys()]) stage.leave(id);
+      stopDemo = startDemo(
+        (message) => controller.handle(message),
+        options.channel || 'chatstage',
+        compareVoices,
+      );
+    } else {
+      client = new TwitchChat(options.channel, {
+        onMessage: (m) => controller.handle(m),
+        onStatus: status,
+      });
+      client.connect();
+    }
+  },
+  onAudioError: (error) => {
+    $('#loading').hidden = true;
+    $('#gate').hidden = false;
+    $('#gate-title').textContent = 'The voices need another try.';
+    $('#gate-description').textContent =
+      'Check your connection and allow unpkg, jsDelivr, and Hugging Face. Then retry.';
+    $('#start-audio').textContent = 'Retry audio ↗';
+    console.error('[ChatStage] Audio startup failed', error);
+    notice(error.message);
+  },
+  onChatError: (error) => {
+    client?.disconnect();
+    client = null;
+    $('#loading').hidden = true;
+    $('#gate').hidden = false;
+    $('#gate-title').textContent = 'Chat needs another try.';
+    $('#gate-description').textContent = 'Speech is ready. Retry the Twitch connection.';
+    $('#start-audio').textContent = 'Retry chat ↗';
+    status('notice', 'Chat connection failed');
+    console.error('[ChatStage] Chat startup failed', error);
+    notice(error.message);
+  },
+});
 if (options.demo) {
   document.body.classList.add('demo');
   stage.seed();
@@ -98,71 +168,14 @@ if (!options.demo && !options.channel) {
   };
   status('notice', 'No channel selected');
 } else {
-  $('#start-audio').onclick = () => void startAudio(true);
+  $('#start-audio').onclick = () => void session.start(true);
   // OBS permits autoplay. A normal browser with a suspended AudioContext
   // retains the click gate; no synthesis or queue playback begins until ready.
   try {
-    context = new (globalThis.AudioContext || globalThis.webkitAudioContext)();
-    if (context.state === 'running' && !preview) void startAudio(false);
+    context = createAudioContext();
+    if (context.state === 'running' && !preview) void session.start(false);
   } catch (error) {
     notice(`Web Audio is unavailable: ${error.message}`);
-  }
-}
-async function startAudio(userGesture) {
-  if (starting || destroyed) return;
-  if (started) {
-    try {
-      await context.resume();
-      $('#gate').hidden = true;
-    } catch (error) {
-      notice(error.message);
-    }
-    return;
-  }
-  starting = true;
-  try {
-    if (!context || context.state === 'closed')
-      context = new (globalThis.AudioContext || globalThis.webkitAudioContext)();
-    if (userGesture || context.state !== 'running') await context.resume();
-    if (context.state !== 'running') {
-      starting = false;
-      return;
-    }
-    player ||= new AudioPlayer(context, options.volume);
-    $('#gate').hidden = true;
-    $('#loading').hidden = false;
-    await tts.initialize();
-    if (destroyed) {
-      tts.dispose();
-      return;
-    }
-    $('#loading').hidden = true;
-    started = true;
-    starting = false;
-    if (options.demo) {
-      for (const id of [...stage.actors.keys()]) stage.leave(id);
-      stopDemo = startDemo(
-        (message) => controller.handle(message),
-        options.channel || 'chatstage',
-        compareVoices,
-      );
-    } else {
-      client = new TwitchChat(options.channel, {
-        onMessage: (m) => controller.handle(m),
-        onStatus: status,
-      });
-      client.connect();
-    }
-    queue.start();
-  } catch (error) {
-    starting = false;
-    $('#loading').hidden = true;
-    $('#gate').hidden = false;
-    $('#gate-title').textContent = 'The voices need another try.';
-    $('#gate-description').textContent =
-      'Check your connection and allow unpkg, jsDelivr, and Hugging Face. Then retry.';
-    $('#start-audio').textContent = 'Retry audio ↗';
-    notice(error.message);
   }
 }
 $('#pause').onclick = () => queue.setPaused(!queue.paused);
@@ -176,12 +189,6 @@ window.addEventListener('message', (event) => {
   if (event.origin !== location.origin || event.source !== parent) return;
   if (event.data?.type === 'chatstage:volume' && Number.isFinite(Number(event.data.volume)))
     player?.setVolume(Number(event.data.volume));
-});
-context?.addEventListener('statechange', () => {
-  if (started && context.state === 'suspended' && !queue.paused) {
-    $('#gate').hidden = false;
-    $('#start-audio').textContent = 'Resume audio ↗';
-  }
 });
 window.addEventListener('pagehide', () => {
   destroyed = true;

@@ -96,6 +96,7 @@ Pending chat/audio lives in memory; the **last spoken caption remains visible** 
 | `overlay.html`, `src/overlay.js`, `src/stage.js` | Transparent overlay, audio gate, progress, SVG cast and captions |
 | `src/irc.js`, `src/twitch.js` | IRC parser/framing, anonymous WebSocket and reconnect |
 | `src/controller.js`, `src/preferences.js` | Commands, authorization, moderation, deduplication and persistence |
+| `src/session.js` | Audio readiness, autoplay/click startup, and independent chat retry |
 | `src/queue.js`, `src/tts.js` | Cancellable prefetch queue, verified Piper API adapter and audio clock |
 | `src/text.js`, `src/language.js`, `src/voices.js`, `src/visemes.js` | Small testable pure modules |
 | `test/` | Node built-in unit and integration tests |
@@ -118,6 +119,27 @@ npm start
 Then open <http://localhost:4174/chatstage/>. Tests traverse the served HTML asset/module graph under that prefix and verify URL generation against the actual GitHub Pages origin.
 
 Deployment configuration is included; publishing requires a writable Git repository and a GitHub Pages-enabled remote. Actual OBS playback, output routing, language intelligibility, and production deployment need separate confirmation in those environments.
+
+## Live-mode browser checks
+
+The optional real-browser harness requires Playwright and an installed Chrome; ordinary `node --test` remains dependency-free. It verifies a real chat join, received PRIVMSGs, non-silent PCM in a running AudioContext, and completed playback, without saving chat transcripts. Start the local server with `PORT=4175` and `BASE_PATH=/chatstage/` (PowerShell environment-variable syntax is shown above), then run:
+
+```sh
+npm install --prefix .artifacts --no-save --package-lock=false playwright@1.56.1
+node scripts/check-live.mjs fps_shaka http://localhost:4175/chatstage/
+node scripts/check-live.mjs fps_shaka http://localhost:4175/chatstage/ --gesture
+node scripts/check-live.mjs fps_shaka http://localhost:4175/chatstage/ --demo
+```
+
+The default uses OBS-style `--autoplay-policy=no-user-gesture-required` with **no clicks**. `--gesture` enforces document activation and clicks the start gate. Reports/screenshots go into ignored `.artifacts/`. Use a currently live channel with active chat; model downloads or a quiet chat may take time.
+
+To check local fixes against the deployed Pages origin without publishing:
+
+```sh
+node scripts/check-live.mjs fps_shaka https://ayutaz.github.io/chatstage/ --patched
+```
+
+`--patched` intercepts the page's `src/` module requests with local files; all CDNs, model downloads, and Twitch connections remain real. This is an origin-compatibility check, **not verification of an updated production deployment**. Audio startup and chat startup have separate retry/error states: a Twitch connection failure does not re-download a ready voice model or show a misleading model error.
 
 ## Built with Codex
 

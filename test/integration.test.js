@@ -4,6 +4,42 @@ import { TwitchChat } from '../src/twitch.js';
 import { LocalTTS, AudioPlayer } from '../src/tts.js';
 import { voiceFor } from '../src/voices.js';
 
+test('native browser timers retain their Window receiver through watchdog and reconnect', (t) => {
+  const timers = [];
+  const cancelled = [];
+  t.mock.method(globalThis, 'setTimeout', function (callback, delay) {
+    assert.equal(this, globalThis, 'Window.setTimeout requires its host receiver');
+    const timer = { callback, delay };
+    timers.push(timer);
+    return timer;
+  });
+  t.mock.method(globalThis, 'clearTimeout', function (timer) {
+    assert.equal(this, globalThis, 'Window.clearTimeout requires its host receiver');
+    cancelled.push(timer);
+  });
+  const sockets = [];
+  class Socket {
+    constructor() {
+      sockets.push(this);
+    }
+    send() {}
+    close() {
+      this.onclose?.();
+    }
+  }
+  const client = new TwitchChat('room', { WebSocketClass: Socket, random: () => 0 });
+  client.connect();
+  sockets[0].onopen();
+  sockets[0].onmessage({ data: ':server ROOMSTATE #room\r\n' });
+  assert.ok(cancelled.includes(timers[0]));
+  sockets[0].close();
+  assert.equal(timers.at(-1).delay, 1000);
+  timers.at(-1).callback();
+  assert.equal(sockets.length, 2);
+  client.disconnect();
+  assert.ok(cancelled.includes(timers[2]));
+});
+
 test('anonymous Twitch handshake, PONG, join status, backoff, shutdown', () => {
   const sockets = [],
     scheduled = [],
@@ -50,6 +86,8 @@ test('anonymous Twitch handshake, PONG, join status, backoff, shutdown', () => {
   assert.equal(socket.sent.at(-1), 'PONG :tmi.twitch.tv\r\n');
   assert.equal(statuses.at(-1)[0], 'connected');
   assert.equal(scheduled[0].cancelled, true);
+  socket.onmessage({ data: ':server ROOMSTATE #room\r\n' });
+  assert.equal(statuses.filter(([state]) => state === 'connected').length, 1);
   socket.close();
   assert.equal(scheduled.at(-1).delay, 1000);
   scheduled.at(-1).callback();

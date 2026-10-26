@@ -7,8 +7,10 @@ export class TwitchChat {
       onMessage,
       onStatus = () => {},
       WebSocketClass = globalThis.WebSocket,
-      schedule = setTimeout,
-      cancel = clearTimeout,
+      // Native Window timers reject a TwitchChat receiver in Chromium.
+      // Binding also preserves that receiver when called from retry/cleanup.
+      schedule = globalThis.setTimeout.bind(globalThis),
+      cancel = globalThis.clearTimeout.bind(globalThis),
       random = Math.random,
     } = {},
   ) {
@@ -22,6 +24,7 @@ export class TwitchChat {
     this.watchdog = null;
   }
   connect() {
+    if (!this.stopped && (this.socket || this.timer !== null)) return;
     this.stopped = false;
     this.onStatus('connecting', `Connecting to #${this.channel}`);
     let socket;
@@ -33,8 +36,9 @@ export class TwitchChat {
     }
     this.socket = socket;
     const framer = new IRCFramer();
-    this.watchdog = this.schedule(() => socket.close(), 20000);
+    let joined = false;
     socket.onopen = () => {
+      if (this.socket !== socket || this.stopped) return;
       socket.send('CAP REQ :twitch.tv/tags twitch.tv/commands\r\n');
       socket.send('PASS SCHMOOPIIE\r\n');
       socket.send(`NICK justinfan${Math.floor(this.random() * 900000000) + 100000000}\r\n`);
@@ -49,10 +53,13 @@ export class TwitchChat {
           m.command === 'ROOMSTATE' ||
           (m.command === '366' && m.params.includes(`#${this.channel}`))
         ) {
-          this.cancel(this.watchdog);
-          this.watchdog = null;
-          this.attempt = 0;
-          this.onStatus('connected', `Listening to #${this.channel}`);
+          if (!joined) {
+            joined = true;
+            this.cancel(this.watchdog);
+            this.watchdog = null;
+            this.attempt = 0;
+            this.onStatus('connected', `Listening to #${this.channel}`);
+          }
         } else if (m.command === 'NOTICE') this.onStatus('notice', m.text);
         this.onMessage?.(m);
       }
@@ -65,6 +72,9 @@ export class TwitchChat {
       this.socket = null;
       if (!this.stopped) this.retry();
     };
+    this.watchdog = this.schedule(() => {
+      if (this.socket === socket) socket.close();
+    }, 20000);
   }
   retry() {
     if (this.stopped) return;
