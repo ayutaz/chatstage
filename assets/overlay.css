@@ -1,0 +1,803 @@
+@font-face {
+  font-family: system-fallback;
+  src: local('Arial');
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+body {
+  background: transparent;
+  color: #f2f0e9;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+}
+button,
+a {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid #c4d5a2;
+  outline-offset: 4px;
+}
+[hidden] {
+  display: none !important;
+}
+.overlay {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 350px;
+}
+.demo {
+  background: #222622;
+  background-image:
+    radial-gradient(ellipse at 52% 24%, #414a3a66, transparent 65%),
+    linear-gradient(0deg, #1e211f 0%, transparent 40%);
+}
+.demo::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  opacity: 0.14;
+  background-image: radial-gradient(#cbd6af 1px, transparent 1px);
+  background-size: 30px 30px;
+  pointer-events: none;
+}
+.top-status {
+  position: absolute;
+  top: 3%;
+  left: 3%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: clamp(10px, 1vw, 16px);
+  letter-spacing: 0.01em;
+}
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #20241feb;
+  border: 1px solid #9ca39133;
+  border-radius: 30px;
+  padding: 9px 14px;
+  color: #c8cebd;
+}
+.status i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #b0b39f;
+}
+.status[data-state='connected'] i,
+.status[data-state='demo'] i {
+  background: #c5d7a0;
+  box-shadow: 0 0 12px #c5d7a055;
+}
+.status[data-state='reconnecting'] i,
+.status[data-state='notice'] i {
+  background: #f4b28d;
+}
+.demo-tag {
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  color: #d3d5c6;
+}
+.demo-heading {
+  position: absolute;
+  left: 8%;
+  top: 13%;
+}
+.eyebrow {
+  font-size: clamp(9px, 1vw, 14px);
+  letter-spacing: 0.2em;
+  color: #c8d2b1;
+}
+.demo-heading h1 {
+  font-weight: 500;
+  letter-spacing: -0.06em;
+  font-size: clamp(28px, 4.2vw, 72px);
+  line-height: 1.05;
+  margin: 22px 0;
+}
+.demo-heading p {
+  font-size: clamp(12px, 1.3vw, 20px);
+  color: #aeb4a6;
+}
+.stage-wrap {
+  position: absolute;
+  bottom: 4%;
+  left: 6%;
+  right: 6%;
+  height: 47%;
+  min-height: 240px;
+  filter: drop-shadow(0 15px 20px #0003);
+}
+.stage-head {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 43px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  border-radius: 0 0 14px 14px;
+  background: #242922f2;
+  padding: 0 24px;
+  border: 1px solid #9ca98a33;
+}
+.stage-brand {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: clamp(10px, 1vw, 15px);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: #e4e6da;
+}
+.brand-mark {
+  color: #edba94;
+  letter-spacing: -0.16em;
+  font-size: 23px;
+  font-weight: 800;
+  line-height: 1;
+}
+.brand-mark span {
+  display: inline-block;
+  transform: translateY(3px);
+}
+.stage-meta {
+  display: flex;
+  gap: 22px;
+  align-items: center;
+  font-size: clamp(8px, 0.8vw, 12px);
+  color: #c3c9b8;
+}
+.stage-meta #play-state {
+  color: #d8e6bd;
+  letter-spacing: 0.13em;
+  font-size: 0.85em;
+}
+.stage-meta #dropped {
+  color: #efb190;
+}
+.cast {
+  position: absolute;
+  inset: auto 2% 66px;
+  height: 61%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3%;
+  pointer-events: none;
+}
+.actor {
+  position: relative;
+  width: 17%;
+  max-width: 230px;
+  flex-shrink: 1;
+  animation: enter 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  transform-origin: center bottom;
+}
+.actor svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+  animation: idle 4.8s ease-in-out infinite;
+  animation-delay: var(--idle-delay);
+  transform-origin: center bottom;
+  transition: filter 0.3s;
+}
+.fur {
+  fill: var(--actor-color);
+  stroke: #292a25;
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+.shadow {
+  fill: #10170e;
+  opacity: 0.35;
+}
+.name-tag {
+  position: absolute;
+  bottom: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #20251ff5;
+  border: 1px solid #a4b3944d;
+  color: color-mix(in srgb, var(--actor-color) 70%, white);
+  border-radius: 8px;
+  padding: 7px 11px;
+  font-size: clamp(9px, 1.05vw, 17px);
+  max-width: 145%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 550;
+  transition: background 0.25s;
+}
+.actor.speaking .name-tag {
+  background: #20251f;
+  border-color: color-mix(in srgb, var(--actor-color) 70%, white);
+  color: color-mix(in srgb, var(--actor-color) 70%, white);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--actor-color) 70%, white);
+}
+.actor.speaking svg {
+  animation: speaking 1.2s ease-in-out infinite;
+  filter: drop-shadow(0 0 18px color-mix(in srgb, var(--actor-color), transparent 75%));
+}
+.actor .eyes {
+  animation: blink 6s infinite;
+  transform-origin: 90px 90px;
+  animation-delay: var(--idle-delay);
+}
+.mouth {
+  display: none;
+  transition:
+    ry 0.05s,
+    rx 0.05s;
+}
+.speaking .smile {
+  display: none;
+}
+.speaking .mouth {
+  display: block;
+}
+.actor[data-viseme='rest'] .smile {
+  display: block;
+}
+.actor[data-viseme='rest'] .mouth {
+  display: none;
+}
+.actor[data-viseme='A'] .mouth {
+  rx: 12;
+  ry: 15;
+}
+.actor[data-viseme='I'] .mouth {
+  rx: 15;
+  ry: 5;
+}
+.actor[data-viseme='U'] .mouth {
+  rx: 6;
+  ry: 9;
+}
+.actor[data-viseme='E'] .mouth {
+  rx: 13;
+  ry: 8;
+}
+.actor[data-viseme='O'] .mouth {
+  rx: 9;
+  ry: 13;
+}
+.actor[data-viseme='M'] .mouth {
+  rx: 9;
+  ry: 1.5;
+}
+.actor[data-viseme='S'] .mouth {
+  rx: 12;
+  ry: 3;
+}
+.actor.leaving {
+  animation: leave 0.26s ease-in both;
+  position: absolute;
+  pointer-events: none;
+}
+.floor {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 42px;
+  height: 50px;
+  background: #3d4836;
+  border: 1px solid #82946c55;
+  border-top: 3px solid #a9b591;
+  border-radius: 50% 50% 0 0/25% 25% 0 0;
+  padding: 17px 24px;
+  display: flex;
+  justify-content: space-between;
+  font-size: clamp(8px, 0.65vw, 11px);
+  letter-spacing: 0.21em;
+  color: #b8c6a2;
+  z-index: -1;
+}
+.floor-stars {
+  color: #d9c598;
+}
+.stage-footer {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 9px 3px;
+  font-size: clamp(7px, 0.6vw, 10px);
+  color: #c3cab6;
+  letter-spacing: 0.05em;
+  text-shadow: 0 1px 4px #000;
+  background: #20241f80;
+  border-radius: 0 0 5px 5px;
+}
+.speech-bubble {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 76%;
+  background: #f1f0e5;
+  color: #282e26;
+  border-radius: 18px;
+  padding: 18px 25px 19px;
+  box-shadow: 0 7px 0 #0002;
+  transition:
+    transform 0.25s,
+    border-color 0.25s;
+  border: 2px solid #e2e3d7;
+  z-index: 2;
+}
+.speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -13px;
+  left: 17%;
+  width: 22px;
+  height: 22px;
+  background: inherit;
+  transform: rotate(45deg);
+  border-radius: 3px;
+}
+.speech-bubble.is-speaking {
+  transform: translateY(-3px);
+  border-color: #c5d6a1;
+}
+.bubble-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+.bubble-meta strong {
+  font-size: clamp(12px, 1.2vw, 20px);
+  font-weight: 650;
+}
+.bubble-meta > span {
+  font-size: clamp(7px, 0.65vw, 11px);
+  letter-spacing: 0.09em;
+  color: #5b6651;
+}
+.bubble-meta #speaker-language {
+  padding: 3px 6px;
+  background: #dfe4d4;
+  border-radius: 4px;
+}
+.bubble-meta #speaker-voice {
+  margin-left: auto;
+}
+.speech-bubble p {
+  margin: 10px 0 0;
+  font-size: clamp(15px, 1.65vw, 30px);
+  line-height: 1.45;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  max-height: 5.8em;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+.speech-bubble p span {
+  color: #71786a;
+  transition: color 0.12s;
+}
+.speech-bubble p span.spoken {
+  color: #26311d;
+  background: #d6e2bf55;
+}
+.speech-progress {
+  height: 3px;
+  background: #d8dccc;
+  margin-top: 12px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.speech-progress i {
+  display: block;
+  height: 100%;
+  background: #75865a;
+  width: 0;
+}
+.audio-gate,
+.loading {
+  position: absolute;
+  top: 16%;
+  right: 7%;
+  width: 36%;
+  max-width: 530px;
+  min-width: 280px;
+  padding: 25px;
+  border: 1px solid #9aab8655;
+  border-radius: 18px;
+  background: #2b3229f7;
+  z-index: 10;
+  box-shadow: 0 14px 80px #0003;
+}
+.audio-gate h2,
+.loading h2 {
+  font-size: clamp(17px, 1.7vw, 27px);
+  margin: 0 0 10px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+.audio-gate p,
+.loading p {
+  font-size: clamp(11px, 1vw, 15px);
+  line-height: 1.5;
+  color: #bcc5b1;
+  margin: 0 0 18px;
+}
+.audio-gate button {
+  border: 0;
+  border-radius: 8px;
+  background: #ceddb5;
+  color: #27301f;
+  padding: 13px 18px;
+  font-size: 14px;
+  font-weight: 650;
+  width: 100%;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+}
+.audio-gate .gate-note {
+  font-size: 10px;
+  margin: 12px 0 0;
+  color: #929e87;
+}
+.gate-symbol {
+  font-size: 28px;
+  margin-bottom: 13px;
+  color: #ecbd9a;
+}
+.loading {
+  display: flex;
+  gap: 15px;
+}
+.loading > div {
+  width: 100%;
+}
+.loading small {
+  color: #adb8a1;
+  font-size: 11px;
+}
+.loading progress {
+  display: block;
+  width: 100%;
+  height: 6px;
+  margin: 20px 0;
+  accent-color: #c5d7a0;
+}
+.spinner {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #67735c;
+  border-top-color: #c5d7a0;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+.notice {
+  position: absolute;
+  top: 8%;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 80%;
+  padding: 12px 20px;
+  border: 1px solid #d7bd8e66;
+  border-radius: 10px;
+  background: #303629f5;
+  color: #ecdcbd;
+  font-size: clamp(11px, 1vw, 16px);
+  z-index: 20;
+}
+.demo-controls {
+  position: absolute;
+  bottom: 1.1%;
+  left: 6%;
+  right: 6%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  font-size: clamp(9px, 0.85vw, 13px);
+}
+.demo-controls button,
+.demo-controls a {
+  color: #b8c2ac;
+  border: 0;
+  background: transparent;
+  padding: 5px;
+  text-decoration: none;
+}
+.demo-controls button:hover,
+.demo-controls a:hover {
+  color: #f5d7b6;
+}
+.demo .stage-wrap {
+  bottom: 9%;
+}
+.preview .demo-heading {
+  top: 11%;
+  left: 5%;
+}
+.preview .demo-heading h1 {
+  font-size: 4.2vw;
+}
+.preview .demo-heading p {
+  font-size: 1.4vw;
+}
+.preview .audio-gate,
+.preview .loading {
+  top: 12%;
+  right: 5%;
+  width: 38%;
+  min-width: 0;
+  padding: 2vw;
+}
+.preview .audio-gate h2 {
+  font-size: 2vw;
+}
+.preview .audio-gate p {
+  font-size: 1.3vw;
+  margin-bottom: 1vw;
+}
+.preview .gate-symbol {
+  font-size: 2.3vw;
+  margin-bottom: 1vw;
+}
+.preview .audio-gate button {
+  padding: 1.2vw 1.6vw;
+  font-size: 1.5vw;
+}
+.preview .audio-gate .gate-note {
+  font-size: 1vw;
+}
+.preview .top-status {
+  font-size: 1.2vw;
+}
+.preview .demo-tag {
+  font-size: 1vw;
+}
+.preview .speech-bubble {
+  padding: 1.7vw 2vw;
+  border-radius: 1.5vw;
+}
+.preview .stage-wrap {
+  left: 5%;
+  right: 5%;
+}
+.preview .stage-head {
+  height: 4.4vw;
+  padding: 0 2vw;
+}
+.preview .cast {
+  bottom: 7vw;
+}
+.preview .floor {
+  bottom: 4.3vw;
+  height: 4.5vw;
+  padding: 1.5vw 2vw;
+}
+.preview .stage-brand {
+  font-size: 1.1vw;
+}
+.preview .stage-meta {
+  font-size: 1vw;
+  gap: 1.5vw;
+}
+.preview .stage-footer {
+  font-size: 0.8vw;
+}
+.preview .brand-mark {
+  font-size: 2.2vw;
+}
+.preview .name-tag {
+  font-size: 1.2vw;
+  padding: 0.7vw 1vw;
+  bottom: -1.2vw;
+}
+.preview .demo-controls {
+  font-size: 1.2vw;
+}
+.preview .speech-bubble p {
+  font-size: 2vw;
+}
+.preview .bubble-meta strong {
+  font-size: 1.4vw;
+}
+.preview .bubble-meta > span {
+  font-size: 0.85vw;
+}
+.preview .stage-wrap {
+  min-height: 0;
+}
+.preview .overlay {
+  min-height: 0;
+}
+@keyframes idle {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(1deg);
+  }
+}
+@keyframes speaking {
+  0%,
+  100% {
+    transform: translateY(-5px);
+  }
+  50% {
+    transform: translateY(-12px) rotate(1deg);
+  }
+}
+@keyframes blink {
+  0%,
+  43%,
+  47%,
+  100% {
+    transform: scaleY(1);
+  }
+  45% {
+    transform: scaleY(0.1);
+  }
+}
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(45px) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes leave {
+  to {
+    opacity: 0;
+    transform: translateY(35px) scale(0.85);
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+@media (max-width: 600px) {
+  .audio-gate,
+  .loading {
+    top: 11%;
+    width: 90%;
+    left: 5%;
+    right: 5%;
+    min-width: 0;
+    padding: 15px;
+  }
+  .demo-heading {
+    display: none;
+  }
+  .preview .demo-heading {
+    display: block;
+  }
+  .stage-wrap {
+    left: 3%;
+    right: 3%;
+  }
+  .stage-meta {
+    gap: 8px;
+  }
+  .stage-head {
+    padding: 0 10px;
+  }
+  .speech-bubble {
+    left: 1%;
+    right: 1%;
+    padding: 12px;
+  }
+  .bubble-meta #speaker-voice {
+    display: none;
+  }
+  .stage-footer > span:first-child {
+    display: none;
+  }
+  .stage-footer {
+    justify-content: center;
+  }
+  .demo-controls {
+    gap: 10px;
+  }
+  .demo-controls a {
+    display: none;
+  }
+}
+
+/* Keep the introduction and audio gate above the caption at 16:9 and in
+   the smaller setup iframe, without reducing the readable live caption. */
+.demo-heading h1 {
+  font-size: clamp(28px, 3.7vw, 64px);
+  margin: 16px 0;
+}
+.audio-gate {
+  top: 12%;
+  padding: 22px;
+}
+.gate-symbol {
+  display: none;
+}
+.preview .demo-heading h1 {
+  font-size: 3.6vw;
+  margin: 1.4vw 0;
+  line-height: 1.08;
+}
+.preview .demo-heading p {
+  display: none;
+}
+.preview .audio-gate {
+  top: 12%;
+  padding: 1.5vw;
+  width: 36%;
+  left: auto;
+  right: 5%;
+}
+.preview .audio-gate h2 {
+  font-size: 1.7vw;
+  margin-bottom: 0.8vw;
+}
+.preview .audio-gate p {
+  font-size: 1.05vw;
+  margin-bottom: 1vw;
+}
+.preview .audio-gate button {
+  font-size: 1.2vw;
+  padding: 1vw 1.4vw;
+}
+.preview .audio-gate .gate-note {
+  display: none;
+}
+@media (max-width: 600px) {
+  .audio-gate {
+    top: 11%;
+    padding: 15px;
+  }
+  .preview .audio-gate {
+    padding: 1.5vw;
+  }
+}

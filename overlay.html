@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>ChatStage · Overlay</title>
+    <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="assets/overlay.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "piper-plus": "https://unpkg.com/piper-plus@0.8.2/src/index.js",
+          "@piper-plus/g2p": "https://cdn.jsdelivr.net/npm/@piper-plus/g2p@0.4.2/src/index.js",
+          "onnxruntime-web": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/ort.min.mjs"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main class="overlay" aria-label="ChatStage Twitch chat stage">
+      <div class="demo-heading" hidden>
+        <span class="eyebrow">YOUR COMMUNITY, IN CHARACTER</span>
+        <h1>A little stage.<br />A lot of personality.</h1>
+        <p>Real voices. Familiar faces. All on your device.</p>
+      </div>
+      <section class="audio-gate" id="gate" aria-labelledby="gate-title">
+        <div class="gate-symbol" aria-hidden="true">♪</div>
+        <div>
+          <h2 id="gate-title">Let’s hear your chat.</h2>
+          <p id="gate-description">Start local speech. The first download can take a minute.</p>
+        </div>
+        <button id="start-audio" type="button">
+          Start audio <span aria-hidden="true">↗</span>
+        </button>
+        <p class="gate-note">No account. No API key. No cloud TTS.</p>
+      </section>
+      <section id="loading" class="loading" hidden aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        <div>
+          <h2 id="loading-title">Warming up the voices</h2>
+          <p id="loading-detail">Loading local speech engine…</p>
+          <progress
+            id="load-progress"
+            max="1"
+            value="0"
+            aria-label="Voice loading progress"
+          ></progress
+          ><small>Models are cached in this browser after the first download.</small>
+        </div>
+      </section>
+      <div class="top-status">
+        <span id="connection" class="status" data-state="idle"
+          ><i></i><span>Getting ready</span></span
+        ><span id="demo-label" class="demo-tag" hidden>SCRIPTED DEMO</span>
+      </div>
+      <div id="notice" class="notice" role="status" hidden></div>
+      <section class="stage-wrap" aria-label="Recent speakers">
+        <div class="stage-head">
+          <span class="stage-brand"
+            ><span class="brand-mark">c<span>s</span></span> CHATSTAGE</span
+          >
+          <div class="stage-meta">
+            <span id="play-state">WAITING FOR CHAT</span><span id="queue-count">0 in queue</span
+            ><span id="dropped" hidden></span>
+          </div>
+        </div>
+        <div class="speech-bubble" id="bubble">
+          <div class="bubble-meta">
+            <strong id="speaker-name">Your chat belongs here.</strong
+            ><span id="speaker-language">WELCOME</span><span id="speaker-voice"></span>
+          </div>
+          <p id="caption">Every chatter gets a voice and a face.</p>
+          <div class="speech-progress"><i id="speech-progress"></i></div>
+        </div>
+        <div class="cast" id="cast"></div>
+        <div class="floor">
+          <span>THE CHAT IS THE SHOW</span
+          ><span class="floor-stars" aria-hidden="true">✦ &nbsp; ✧ &nbsp; ✦</span>
+        </div>
+        <footer class="stage-footer">
+          <span>LOCAL VOICES · LIVE COMMUNITY</span
+          ><span id="voice-credit">Voice: Tsukuyomi-chan © Rei Yumesaki · CSS10</span>
+        </footer>
+      </section>
+      <nav class="demo-controls" hidden aria-label="Demo playback controls">
+        <button id="pause" type="button">Pause</button
+        ><button id="skip" type="button">Skip line ↗</button
+        ><button id="clear" type="button">Clear stage</button
+        ><a href="index.html" target="_top">Set up your stage ↗</a>
+      </nav>
+    </main>
+    <script type="module" src="src/overlay.js"></script>
+  </body>
+</html>
